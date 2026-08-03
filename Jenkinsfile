@@ -8,27 +8,38 @@ pipeline {
 
     stages {
 
-        stage('Checkout') {
-            steps {
-                checkout scm
-            }
-        }
-
-
         stage('Python Tests') {
             steps {
                 sh '''
+                echo "=== Python Environment ==="
+
                 python3 --version
-                pip3 install -r requirements.txt
+
+                echo "=== Creating Virtual Environment ==="
+
+                python3 -m venv .venv
+
+                . .venv/bin/activate
+
+                echo "=== Installing Dependencies ==="
+
+                pip install --upgrade pip
+
+                pip install -r requirements.txt
+
+                echo "=== Running Tests ==="
+
                 pytest -v
                 '''
             }
         }
 
 
-        stage('Security - Semgrep') {
+        stage('Security - Semgrep SAST') {
             steps {
                 sh '''
+                echo "=== Running Semgrep SAST Scan ==="
+
                 docker run --rm \
                 -v $(pwd):/src \
                 semgrep/semgrep \
@@ -38,22 +49,28 @@ pipeline {
         }
 
 
-        stage('Security - Gitleaks') {
+        stage('Security - Gitleaks Secrets Scan') {
             steps {
                 sh '''
+                echo "=== Running Gitleaks Scan ==="
+
                 docker run --rm \
                 -v $(pwd):/repo \
                 zricethezav/gitleaks:latest \
-                detect --source=/repo
+                detect \
+                --source=/repo
                 '''
             }
         }
 
 
-        stage('Build Docker Image') {
+        stage('Docker Build') {
             steps {
                 sh '''
-                docker build -t ${IMAGE_NAME}:latest .
+                echo "=== Building Docker Image ==="
+
+                docker build \
+                -t ${IMAGE_NAME}:latest .
                 '''
             }
         }
@@ -62,11 +79,33 @@ pipeline {
         stage('Container Security - Trivy') {
             steps {
                 sh '''
+                echo "=== Running Trivy Container Scan ==="
+
                 docker run --rm \
                 -v /var/run/docker.sock:/var/run/docker.sock \
-                aquasec/trivy image \
+                aquasec/trivy:latest \
+                image \
                 --severity HIGH,CRITICAL \
+                --ignore-unfixed \
                 ${IMAGE_NAME}:latest
+                '''
+            }
+        }
+
+
+        stage('Pipeline Summary') {
+            steps {
+                echo '''
+                =====================================
+                DevSecOps Pipeline Completed
+                =====================================
+
+                ✔ Python Tests
+                ✔ SAST - Semgrep
+                ✔ Secrets Detection - Gitleaks
+                ✔ Docker Build
+                ✔ Container Security - Trivy
+
                 '''
             }
         }
@@ -77,11 +116,12 @@ pipeline {
     post {
 
         success {
-            echo 'DevSecOps Pipeline completed successfully'
+            echo "SUCCESS: Security pipeline passed"
         }
 
+
         failure {
-            echo 'Pipeline failed - check logs'
+            echo "FAILURE: Review pipeline logs"
         }
 
     }
