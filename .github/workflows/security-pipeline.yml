@@ -11,8 +11,10 @@ on:
       - main
       - develop
 
+
 permissions:
   contents: read
+
 
 jobs:
 
@@ -21,22 +23,35 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+
+      - name: Verify environment
+        run: |
+          python --version
+          pip list
+          ls -la
+          find . -maxdepth 2 -type f
+
+
       - name: Run tests
         run: |
           python -m pytest -v
+
 
 
   semgrep:
@@ -44,8 +59,10 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
 
       - name: Run Semgrep
         uses: semgrep/semgrep-action@v1
@@ -53,16 +70,20 @@ jobs:
           config: p/default
 
 
+
   gitleaks:
     name: Secrets - Gitleaks
     runs-on: ubuntu-24.04
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
+
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
+
 
 
   trivy:
@@ -70,8 +91,10 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
 
       - name: Run Trivy
         uses: aquasecurity/trivy-action@v0.36.0
@@ -83,13 +106,16 @@ jobs:
           ignore-unfixed: true
 
 
+
   checkov:
     name: IaC - Checkov
     runs-on: ubuntu-24.04
 
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
+
 
       - name: Run Checkov
         uses: bridgecrewio/checkov-action@v12
