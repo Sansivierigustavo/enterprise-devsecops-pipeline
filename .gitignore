@@ -1,17 +1,28 @@
 # Python virtual environment
+
 .venv/
 app/.venv/
 
 # Python cache
+
 __pycache__/
 *.pyc
 
 # Pytest
+
 .pytest_cache/
 
 # Environment variables
+
 .env
 
 # IDE
+
 .vscode/
 .idea/
+
+# Coverage reports
+
+.coverage
+coverage.xml
+htmlcov/
