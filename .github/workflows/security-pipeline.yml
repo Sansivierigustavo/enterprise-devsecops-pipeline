@@ -11,10 +11,10 @@ on:
       - main
       - develop
 
+  workflow_dispatch:
 
 permissions:
   contents: read
-
 
 jobs:
 
@@ -25,20 +25,17 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
         with:
           python-version: "3.12"
-
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
 
       - name: Verify environment
         run: |
@@ -47,11 +44,9 @@ jobs:
           ls -la
           find . -maxdepth 2 -type f
 
-
       - name: Run tests
         run: |
           python -m pytest -v
-
 
 
   semgrep:
@@ -61,14 +56,12 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Run Semgrep
-        uses: semgrep/semgrep-action@v1
+        uses: semgrep/semgrep-action@713efdd345f3035192eaa63f56867b88e63e4e5d # v1
         with:
           config: p/default
-
 
 
   gitleaks:
@@ -78,12 +71,10 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
 
 
   trivy:
@@ -93,18 +84,16 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Run Trivy Filesystem Scan
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           scan-type: fs
           scan-ref: .
           severity: CRITICAL,HIGH
           exit-code: 1
           ignore-unfixed: true
-
 
 
   checkov:
@@ -114,15 +103,13 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Run Checkov
-        uses: bridgecrewio/checkov-action@v12
+        uses: bridgecrewio/checkov-action@9b70310bcd306d11740313070b940167d6b23085 # v12
         with:
           directory: .
           framework: terraform
-
 
 
   docker-security:
@@ -132,16 +119,14 @@ jobs:
     steps:
 
       - name: Checkout repository
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Build Docker image
         run: |
           docker build -t enterprise-devsecops-app .
 
-
       - name: Scan Docker image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
         with:
           image-ref: enterprise-devsecops-app:latest
           severity: CRITICAL,HIGH

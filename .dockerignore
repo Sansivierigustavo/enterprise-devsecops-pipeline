@@ -1,0 +1,4 @@
+.venv
+.git
+reports
+.pytest-cache
