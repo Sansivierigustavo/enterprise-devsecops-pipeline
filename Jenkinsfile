@@ -194,6 +194,7 @@ pipeline {
                     echo "====================================="
 
                     docker build \
+                        --pull \
                         -t ${IMAGE_NAME}:latest .
 
                     echo "Docker image built successfully."
