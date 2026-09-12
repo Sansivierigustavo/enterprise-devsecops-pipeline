@@ -161,12 +161,22 @@ pipeline {
 
                     mkdir -p reports
 
+                    set +e
                     docker run --rm \
                         -v "$(pwd):/src" \
                         bridgecrew/checkov:latest \
                         --directory /src \
                         --output json \
-                        --output-file-path /src/reports/checkov.json
+                        --output-file-path /src/reports
+                    CHECKOV_EXIT=$?
+                    set -e
+
+                    mv reports/results_json.json reports/checkov.json
+
+                    if [ $CHECKOV_EXIT -ne 0 ]; then
+                        echo "Checkov found failed checks - failing the build."
+                        exit 1
+                    fi
 
                     echo "Checkov Quality Gate Passed."
                 '''
