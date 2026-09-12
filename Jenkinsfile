@@ -83,7 +83,7 @@ pipeline {
 
                     docker run --rm \
                         -v "$(pwd):/src" \
-                        semgrep/semgrep \
+                        semgrep/semgrep:1.171.0 \
                         semgrep scan \
                         --config auto \
                         --error \
@@ -110,7 +110,7 @@ pipeline {
 
                     docker run --rm \
                         -v "$(pwd):/repo" \
-                        zricethezav/gitleaks:latest \
+                        zricethezav/gitleaks:v8.30.1 \
                         detect \
                         --source=/repo \
                         --report-format=json \
@@ -135,7 +135,7 @@ pipeline {
 
                     docker run --rm \
                         -v "$(pwd):/src" \
-                        aquasec/trivy:latest \
+                        aquasec/trivy:0.73.0 \
                         fs \
                         --severity HIGH,CRITICAL \
                         --ignore-unfixed \
@@ -164,7 +164,7 @@ pipeline {
                     set +e
                     docker run --rm \
                         -v "$(pwd):/src" \
-                        bridgecrew/checkov:latest \
+                        bridgecrew/checkov:3.3.9 \
                         --directory /src \
                         --output json \
                         --output-file-path /src/reports
@@ -215,7 +215,7 @@ pipeline {
                     docker run --rm \
                         -v /var/run/docker.sock:/var/run/docker.sock \
                         -v "$(pwd)/reports:/reports" \
-                        aquasec/trivy:latest \
+                        aquasec/trivy:0.73.0 \
                         image \
                         --severity HIGH,CRITICAL \
                         --ignore-unfixed \
