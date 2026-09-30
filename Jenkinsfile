@@ -2,9 +2,21 @@ pipeline {
 
     agent any
 
+    parameters {
+        booleanParam(
+            name: 'DESTROY_INFRA_AFTER_APPLY',
+            defaultValue: true,
+            description: 'Se marcado, destroi a infraestrutura AWS ao final do build. Desmarque apenas para demonstracoes manuais (ex: gravacao de video) - lembre-se de destruir manualmente depois.'
+        )
+    }
+
     environment {
         IMAGE_NAME = "enterprise-devsecops-app"
         COVERAGE_THRESHOLD = "80"
+
+        AWS_ACCESS_KEY_ID     = credentials('aws-access-key-id')
+        AWS_SECRET_ACCESS_KEY = credentials('aws-secret-access-key')
+        AWS_DEFAULT_REGION    = "us-east-1"
     }
 
     stages {
@@ -169,6 +181,7 @@ pipeline {
                         --output json \
                         --output-file-path /src/reports
                     CHECKOV_EXIT=$?
+                    
                     set -e
 
                     mv reports/results_json.json reports/checkov.json
@@ -229,6 +242,119 @@ pipeline {
             }
         }
 
+          stage('Terraform Init & Validate') {
+            steps {
+                dir('infra/terraform') {
+                    sh '''
+                        set -e
+                        terraform init -input=false
+                        terraform validate
+                    '''
+                }
+            }
+        }
+
+
+        stage('Infra Security - tfsec') {
+            steps {
+                dir('infra/terraform') {
+                    sh '''
+                        mkdir -p ../../reports
+
+                        set +e
+                        tfsec . --format json --out ../../reports/tfsec.json
+                        TFSEC_EXIT=$?
+                        set -e
+
+                        tfsec . || true
+
+                        if [ $TFSEC_EXIT -ne 0 ]; then
+                            echo "tfsec found issues in the Terraform code - failing the build."
+                            exit 1
+                        fi
+
+                        echo "tfsec Quality Gate Passed."
+                    '''
+                }
+            }
+        }
+
+
+        stage('Infra Security - Checkov (Terraform)') {
+            steps {
+                dir('infra/terraform') {
+                    sh '''
+                        mkdir -p ../../reports
+
+                        set +e
+                        checkov -d . --framework terraform --output cli --output json --output-file-path console,../../reports
+                        CHECKOV_TF_EXIT=$?
+                        set -e
+
+                        mv ../../reports/results_json.json ../../reports/checkov-terraform.json
+
+                        if [ $CHECKOV_TF_EXIT -ne 0 ]; then
+                            echo "Checkov found failed checks in the Terraform code - failing the build."
+                            exit 1
+                        fi
+
+                        echo "Checkov (Terraform) Quality Gate Passed."
+                    '''
+                }
+            }
+        }
+
+
+        stage('Terraform Plan') {
+            steps {
+                dir('infra/terraform') {
+                    sh '''
+                        set -e
+                        terraform plan -input=false -out=tfplan
+                    '''
+                }
+            }
+        }
+
+
+        stage('Aprovacao Manual - Infraestrutura AWS') {
+            steps {
+                input message: 'Scans de infraestrutura revisados e aprovados. Aplicar os recursos na AWS real?', ok: 'Aplicar'
+            }
+        }
+
+
+        stage('Terraform Apply (AWS)') {
+            steps {
+                dir('infra/terraform') {
+                    sh '''
+                        set -e
+                        terraform apply -input=false tfplan
+
+                        echo "====================================="
+                        echo "Recursos provisionados na AWS:"
+                        echo "====================================="
+                        terraform output
+                    '''
+                }
+            }
+        }
+
+
+        stage('Terraform Destroy (AWS)') {
+            when {
+                expression { return params.DESTROY_INFRA_AFTER_APPLY }
+            }
+            steps {
+                dir('infra/terraform') {
+                    sh '''
+                        set -e
+                        terraform destroy -input=false -auto-approve
+                    '''
+                }
+            }
+        }
+
 
         stage('Pipeline Summary') {
             steps {
@@ -245,6 +371,11 @@ DevSecOps Pipeline Completed
 ✔ IaC Security - Checkov
 ✔ Docker Build
 ✔ Container Security - Trivy
+✔ Terraform Init & Validate
+✔ Infra Security - tfsec
+✔ Infra Security - Checkov (Terraform)
+✔ Terraform Plan
+✔ Terraform Apply (AWS)
 
 Security reports generated in:
 reports/
