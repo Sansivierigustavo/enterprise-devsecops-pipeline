@@ -1,6 +1,10 @@
 data "aws_caller_identity" "current" {}
 
 resource "aws_s3_bucket" "app_data" {
+  # Riscos aceitos conscientemente (bucket de demonstracao, sem dados de producao):
+  # checkov:skip=CKV_AWS_18: Access logging exigiria um segundo bucket so para logs, desproporcional para uma demo
+  # checkov:skip=CKV_AWS_144: Replicacao cross-region e requisito de disaster recovery de producao, fora do escopo
+  # checkov:skip=CKV2_AWS_62: Nao ha consumidores de eventos (SNS/SQS/Lambda) neste projeto
   bucket = "${var.bucket_name}-${data.aws_caller_identity.current.account_id}"
 }
 
@@ -23,8 +27,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "app_data_encrypti
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
+      sse_algorithm = "aws:kms"
     }
+    bucket_key_enabled = true
   }
 }
 
@@ -32,6 +37,26 @@ resource "aws_s3_bucket_versioning" "app_data_versioning" {
   bucket = aws_s3_bucket.app_data.id
   versioning_configuration {
     status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "app_data_lifecycle" {
+  bucket     = aws_s3_bucket.app_data.id
+  depends_on = [aws_s3_bucket_versioning.app_data_versioning]
+
+  rule {
+    id     = "cleanup-old-versions"
+    status = "Enabled"
+
+    filter {}
+
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
   }
 }
 
