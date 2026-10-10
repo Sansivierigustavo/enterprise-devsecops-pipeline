@@ -1,0 +1,21 @@
+title = "enterprise-devsecops-pipeline gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+  description = "Arquivos gerados automaticamente que nao sao segredos reais"
+  paths = [
+    '''\.venv/''',
+    '''venv/''',
+    '''__pycache__/''',
+    '''\.pytest_cache/''',
+    '''htmlcov/''',
+    '''reports/''',
+    '''coverage\.xml''',
+    '''\.coverage''',
+    '''\.terraform/''',
+    '''terraform\.tfstate''',
+    '''terraform\.tfstate\.backup''',
+    '''tfplan''',
+  ]
